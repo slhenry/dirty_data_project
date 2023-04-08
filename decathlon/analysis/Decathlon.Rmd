@@ -1,0 +1,22 @@
+---
+title: "Decathlon"
+output: html_document
+date: "2023-04-08"
+---
+
+# load libraries and read in data
+```{r}
+library(tidyverse)
+library(here)
+```
+
+```{r}
+decathlon_data <- read_csv(here("data/decathlon_clean.csv"))
+```
+```{r}
+# view data and explore
+glimpse(decathlon_data)
+```
+
+
+
