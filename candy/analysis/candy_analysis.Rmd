@@ -1,0 +1,230 @@
+---
+title: "Untitled"
+output: html_document
+date: "2023-04-12"
+---
+# Halloween candy data analysis
+
+## Introduction to project
+Three datasets were provided, containing details from surveys of halloween candy in 2015, 2016 and 2017. Around 113 different types of sweet were surveyed, with responses rated as either "Joy", "Meh" or "Despair". Information from responders included age, gender, country and whether they were going trick or treating, although it is noted that the responses sought by the survey were not consistent each year. 
+
+# Previous data cleaning steps included
+- combining 3 datasets of candy reviews from 2015, 2016 and 2017
+- standarising the names of candies to remove repeat columns (e.g. "hersheys_dark_chocolate" and "dark_chocolate_hersheys")
+- cleaning up the country names (lots of variations in names for America) 
+- selecting columns for candies to remove columns asking for comment
+- data was converted into long format so that each line corresponds to a single observation
+
+# Assumptions made about the data
+- no distinction made between candy and chocolate to keep all the information. 
+- lots of variation in country names, but any with fewer than 10 counts were left in as it would be very time-consuming to change each one
+- several columns with text data were removed from the clean data, difficult to see what value this would bring to the analysis
+
+
+# Install libraries
+```{r}
+library(tidyverse)
+library(here)
+```
+
+# read in data
+```{r}
+candy_long <- read_csv(here("clean_data/candy_long.csv"))
+head(candy_long)
+dim(candy_long)
+```
+
+# Q1: What is the total number of candy ratings given across the three years. (Number of candy ratings, not the number of raters. Don’t count missing values)
+Answer = 761,421
+```{r}
+# count all the ratings in the table, first by dropping the NAs
+candy_long %>% 
+  select(rating)%>% 
+  drop_na %>% 
+  count()
+```
+```{r}
+# check if the earlier number is correct, this time by counting by rating group. Yes, all the same. 
+candy_long %>% 
+  count(rating)
+```
+
+
+
+# Q2: What was the average age of people who are going out trick or treating?
+Answer: Inf?? 
+```{r}
+# Step 1 - first change age column from character into numeric format
+candy_long <- candy_long %>% 
+  transform(age = as.numeric(age))
+```
+
+
+
+```{r}
+candy_long %>% 
+  select(going_trick_or_treating, age) %>% 
+  group_by(going_trick_or_treating) %>%
+  summarise(avg_age = mean(age, na.rm = TRUE)) 
+```
+
+
+Q3: What was the average age of people who are not going trick or treating?
+Answer: 39.9 years
+```{r}
+candy_long %>% 
+  group_by(going_trick_or_treating) %>% 
+  summarise(average_age = mean(age, na.rm = TRUE))
+```
+
+# Q4: For each of joy, despair and meh, which candy bar received the most of these ratings?
+Joy = any_full_sized_candy_bar
+Meh = lollipops
+Despair = broken_glow_stick. This is not a candy, so I checked for second worse and it is gum_from_baseball_cards
+```{r}
+candy_long%>%
+  select(candy_type, rating) %>% 
+  filter(!is.na(rating)) %>% 
+  group_by(rating) %>% 
+  count(candy_type) %>% 
+  slice_max(n, n = 1)
+```
+
+```{r}
+candy_long %>% 
+  group_by(rating, candy_type) %>% 
+  count() %>%
+  filter(rating == "DESPAIR") %>% 
+  arrange(desc(n)) %>% 
+  head
+```
+
+
+
+#Q5: How many people rated Starburst as despair?
+Answer: 1990 people (all mental)
+```{r}
+candy_long %>% 
+  filter(candy_type == "starburst") %>% 
+  group_by(rating) %>% 
+  count()
+```
+
+
+## For the next three questions, count despair as -1, joy as +1, and meh as 0.
+
+
+```{r}
+# create a new table with recoded rating scores
+candy_score <- candy_long %>%
+  mutate(rating = recode(rating, "JOY" = 1, "MEH" = 0, "DESPAIR" = -1))
+  
+```
+
+
+# Q6: What was the most popular candy bar by this rating system for each gender in the dataset ?
+Answer: Any_full_size_candy_bar was most popular for men, women, other and NA. People who responded 'I would rather not say' to gender question prefered cash_or_other_forms_of_legal_tender. 
+```{r}
+candy_score %>% 
+  select(your_gender, candy_type, rating) %>% 
+  group_by(your_gender, candy_type) %>% 
+  summarise(top_candy = sum(rating, na.rm = TRUE)) %>% 
+  arrange(desc(top_candy)) %>% 
+  slice_max(top_candy, n = 1)
+
+```
+
+
+Q7: What was the most popular candy bar in each year?
+
+```{r}
+# Step 1 - add in an additional column containing the year
+candy_year <- candy_score %>% 
+  mutate(year = str_extract(id, "201[56]"),
+         .after = id)
+```
+
+
+```{r}
+# step 2 - dataset 2017 didn't include a timestamp, and had a internal_id instead. These have been converted to NAs, and now need relabelling to 2017
+candy_year <- candy_year %>% 
+  mutate(year = replace_na(year, "2017"))
+```
+
+```{r}
+# check 
+candy_year %>% 
+  count(year)
+```
+
+
+```{r}
+# step 3 - analyse top rated candy bar by year
+candy_year%>% 
+  select(year, candy_type, rating) %>%
+  group_by(year, candy_type)%>% 
+  summarise(top_candy = sum(rating, na.rm = TRUE)) %>% 
+  arrange(desc(top_candy)) %>% 
+  slice_max(top_candy, n = 1)
+```
+
+
+
+# Q8: What was the most popular candy bar by this rating for people in US, Canada, UK, and all other countries?
+
+```{r}
+candy_score %>%
+  group_by(country) %>% 
+  count(country) %>% 
+  arrange(desc(n))
+```
+
+
+
+```{r}
+# step 1: create an additional column "country_group" to assign countries to either USA, UK, Canada and other. Filter out the NAs at the same time (although could add to the other countries)
+candy_country <- candy_score %>% 
+  filter(!is.na(country)) %>% 
+  mutate(country_group = case_when(
+    country == "usa" ~ "usa",
+    country == "canada" ~ "canada",
+    country == "uk" ~ "uk",
+    TRUE ~ "other countries"
+  ))
+```
+
+
+```{r}
+# step 2: analyse the data grouped by country
+candy_country%>% 
+  select(country_group, candy_type, rating) %>%
+  group_by(country_group, candy_type)%>% 
+  summarise(top_candy = sum(rating, na.rm = TRUE)) %>% 
+  arrange(desc(top_candy)) %>% 
+  slice_max(top_candy, n = 1)
+```
+
+```{r}
+# I want to compare this result to data without the NAs removed. Therefore, create "country_group_with_nas" to assign countries to either USA, UK, Canada and other. 
+candy_country_with_nas<- candy_score %>% 
+  mutate(country_group = case_when(
+    country == "usa" ~ "usa",
+    country == "canada" ~ "canada",
+    country == "uk" ~ "uk",
+    TRUE ~ "other countries"
+  ))
+```
+
+
+
+```{r}
+# step 2: analyse the data grouped by country
+candy_country_with_nas%>% 
+  select(country_group, candy_type, rating) %>%
+  group_by(country_group, candy_type)%>% 
+  summarise(top_candy = sum(rating, na.rm = TRUE)) %>% 
+  arrange(desc(top_candy)) %>% 
+  slice_max(top_candy, n = 1)
+```
+
+
