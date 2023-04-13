@@ -8,7 +8,7 @@ library(stringr)
 library(here)
 
 # read in data
-decathlon_raw <- readRDS("~/$CodeClan/dirty_data_projectSarahHenry/dirty_data_project/decathlon/data/decathlon.rds")
+decathlon_raw <- readRDS("data/decathlon.rds")
 
 # view data 
 head(decathlon_raw)

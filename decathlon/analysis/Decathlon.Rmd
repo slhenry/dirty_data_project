@@ -22,7 +22,7 @@ library(here)
 ```
 
 ```{r}
-decathlon_data <- read_csv(here("~/$CodeClan/dirty_data_projectSarahHenry/dirty_data_project/decathlon/data/decathlon_clean.csv"))
+decathlon_data <- read_csv(here("data/decathlon_clean.csv"))
 ```
 
 
