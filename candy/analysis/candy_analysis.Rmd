@@ -136,7 +136,7 @@ candy_score %>%
 
 
 Q7: What was the most popular candy bar in each year?
-
+Answer: any_full_size_candy_bar is the most popular candy bar in each year
 ```{r}
 # Step 1 - add in an additional column containing the year
 candy_year <- candy_score %>% 
@@ -171,7 +171,7 @@ candy_year%>%
 
 
 # Q8: What was the most popular candy bar by this rating for people in US, Canada, UK, and all other countries?
-
+Answer: USA, Canada and other countries all had any_full_size_candy_bar as their favourite, except the UK which prefered cash_or_other_forms_of_legal_tender. 
 ```{r}
 candy_score %>%
   group_by(country) %>% 
